@@ -64,6 +64,12 @@ function(event, ...)
         return
     end
     
+    if type == "SPELL_AURA_APPLIED" and MoreDots.auras.refreshAuras[spellId] then
+        print("REFRESHING SNAPSHOT")
+        MoreDots.snapshot.onDotRefreshed(spellId, destGuid)
+        return
+    end
+    
     -- clear snapshot for target when DoT expires or is removed
     if type == "SPELL_AURA_REMOVED" and MoreDots.dots.allDots[spellId] then
         print("REMOVING SNAPSHOT")
@@ -76,4 +82,11 @@ function(event, ...)
         MoreDots.snapshot.onDotRefreshed(spellId, destGUID)
         return
     end
+    
+    if type == "SPELL_DAMAGE" and MoreDots.spells.refreshSpells[spellId] then
+        print("REFRESHING SNAPSHOT")
+        MoreDots.snapshot.onDotRefreshed(spellId, destGuid)
+        return
+    end
 end
+

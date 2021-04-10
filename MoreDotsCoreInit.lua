@@ -1,7 +1,7 @@
 --[[
     Events that are created by MoreDots
-    MOREDOTS_DOT_APPLIED, destGuid, spellId, snap
-    MOREDOTS_DOT_REMOVED, destGuid, spellId
+    MOREDOTS_DOT_APPLIED, spellId, destGuid, snap
+    MOREDOTS_DOT_REMOVED, spellId, destGuid
 ]]
 MoreDots = {}
 
@@ -37,6 +37,13 @@ for k,v in pairs(MoreDots.dots.critDots) do
     MoreDots.dots.allDots[k] = v
 end
 
+--refresh dots need to be treated differently
+MoreDots.dots.allDotsExceptRefresh = {
+    [25467] = "Devouring Plague",
+    [34917] = "Vampiric Touch",
+    [30405] = "Unstable Affliction"
+}
+
 MoreDots.auras = {}
 
 MoreDots.auras.damageModifiers = { 
@@ -67,6 +74,13 @@ MoreDots.auras.lostOnApply = {
     [57531] = "Arcane Potency"
 }
 
+--auras that relate to spells that refresh DoTs
+MoreDots.auras.refreshAuras = {
+    [25387] = "Mind Flay",
+    [27217] = "Drain Soul",
+    [47857] = "Drain Life"
+}
+
 --[[ this will hold the aura id and a time that it "expires". this time is completely 
 arbitrary and only represents an estimate of what spell cast received the benefit of
 the aura.
@@ -93,7 +107,34 @@ for k,v in pairs(MoreDots.auras.hasteModifiers) do
     MoreDots.auras.allAuras[k] = v
 end
 
-MoreDots.auras.activeAuras = {} --state for tracking active auras we care about when applying DoTs
+for k,v in pairs(MoreDots.auras.spellPowerModifiers) do
+    MoreDots.auras.allAuras[k] = v
+end
+
+for k,v in pairs(MoreDots.auras.lostOnApply) do
+    MoreDots.auras.allAuras[k] = v
+end
+
+for k,v in pairs(MoreDots.auras.refreshAuras) do
+    MoreDots.auras.allAuras[k] = v
+end
+
+--[[state for tracking active auras we care about when applying DoTs
+{
+    [SPELL_ID] = true,
+    [SPELL_ID] = false
+}
+]]
+MoreDots.auras.activeAuras = {}
+
+MoreDots.spells = {}
+
+--spells that refresh dots when they hit
+MoreDots.spells.refreshSpells = {
+    [47809] = "Shadow Bolt",
+    [59161] = "Haunt",
+    [48127] = "Mind Blast"
+}
 
 MoreDots.snapshot = {}
 --[[state will look something like this:
@@ -112,11 +153,13 @@ MoreDots.snapshot.relevantEvents = {
     ["SPELL_AURA_APPLIED"] = true,
     ["SPELL_AURA_REFRESH"] = true,
     ["SPELL_AURA_REMOVED"] = true,
+    ["SPELL_DAMAGE"] = true,
+    ["SPELL_CAST_SUCCESS"] = true
 }
 
 MoreDots.snapshot.makeSnapshotTable = 
 function(spellId)
-    local time = GetTime()
+    local now = GetTime()
     local snapTable = {}
     
     print("Active Auras: ")
@@ -125,7 +168,6 @@ function(spellId)
     end
     
     for k,v in pairs(MoreDots.auras.damageModifiers) do
-        print("Checking if " .. k .. " is active")
         snapTable[v] = MoreDots.snapshot.buffIsActive(k)    
     end
     
@@ -134,7 +176,11 @@ function(spellId)
             snapTable[v] = MoreDots.snapshot.buffIsActive(k)
         end
         
-        -- arcane potency is a crit modifier the special case will be handled here
+        for k,v in pairs(MoreDots.auras.lostOnApply) do
+            if MoreDots.auras.lostOnApplyExpireTime[k] > now then
+                snapTable[v] = true
+            end
+        end
     end
     
     if MoreDots.dots.hasteDots[spellId] then 
@@ -155,8 +201,6 @@ function(spellId, destGuid)
     
     local snapTable = MoreDots.snapshot.makeSnapshotTable(spellId)
     
-    MoreDots.snapshot.state[spellName] = {}
-    MoreDots.snapshot.state[spellName][destGuid] = {}
     MoreDots.snapshot.state[spellName][destGuid] = snapTable
     WeakAuras.ScanEvents("MOREDOTS_DOT_APPLIED", spellId, destGuid, snapTable)
 end
@@ -172,15 +216,49 @@ function (spellId, destGuid)
 end
 
 MoreDots.snapshot.onDotRefreshed =
-function(spellId, destGuid)
-    local spellName = MoreDots.dots.refreshDots[spellId]
-    if not spellName then
+function(spellId, destGuid)   
+    if MoreDots.dots.allDotsExceptRefresh[spellId] then
         MoreDots.snapshot.onDotApply(spellId, destGuid)
         return
     end
     
-    --[[ Shadow Word: Pain refreshes everything except spell power
-    corruption refreshes everything except spell power and haste]]
+    -- do not handle this case only handle refreshes for refresh spells
+    if MoreDots.dots.refreshDots[spellId] then
+        return
+    end
+    
+    if spellId == 59161 or spellId == 47857 or spellId == 47809  then
+        local snapTable = MoreDots.snapshot.state["Corruption"][destGuid]
+        if snapTable ~= nil then
+            for k,v in pairs(snapTable) do
+                for i,j in pairs (MoreDots.auras.hasteModifiers) do
+                    if k == j then
+                        snapTable[k] = false
+                        break
+                    end
+                end
+                
+                for i,j in pairs (MoreDots.auras.spellPowerModifiers) do
+                    if k == j then
+                        snapTable[k] = false
+                        break
+                    end
+                end
+            end
+        end
+    elseif spellId == 25387 or spellId == 48127 then    
+        local snapTable = MoreDots.snapshot.state["Shadow Word: Pain"][destGuid]
+        if snapTable ~= nil then
+            for k,v in pairs(snapTable) do
+                for i,j in pairs (MoreDots.auras.spellPowerModifiers) do
+                    if k == j then
+                        snapTable[k] = false
+                        break
+                    end
+                end
+            end
+        end
+    end
 end
 
 MoreDots.snapshot.buffIsActive = 
@@ -231,5 +309,18 @@ function(auraId)
     if not auraName then
         return
     end
+    
+    if MoreDots.auras.lostOnApply[auraId] then
+        local time = GetTime()
+        MoreDots.auras.lostOnApplyExpireTime[auraId] = time + MoreDots.auras.lostOnApplyExpireTimeInterval
+        for k,v in pairs(MoreDots.auras.lostOnApplyExpireTime) do
+            print("LOST TABLE: ", k, v)
+        end
+    end
+    
     MoreDots.auras.activeAuras[auraId] = false
 end
+
+--initialization
+MoreDots.snapshot.resetSnapshots()
+
