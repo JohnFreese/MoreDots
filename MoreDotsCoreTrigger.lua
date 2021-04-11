@@ -40,10 +40,10 @@ function(event, ...)
     if not MoreDots.auras.allAuras[spellId] and not MoreDots.dots.allDots[spellId] then
         return
     end
-    
+
     -- buff changes on player that affect snapshots
     if destGUID == MoreDots.playerGuid then
-        if type == "SPELL_AURA_APPLIED" and MoreDots.auras.allAuras[spellId] then
+        if (type == "SPELL_AURA_APPLIED" or type == "SPELL_AURA_REFRESH") and MoreDots.auras.allAuras[spellId] then
             --print("aura applied: "..spellId);
             MoreDots.auras.onBuffApplied(spellId)
             return
@@ -54,7 +54,7 @@ function(event, ...)
     end
     
     -- record snapshot for target when DoT is applied
-    if type == "SPELL_AURA_APPLIED" and MoreDots.dots.allDots[spellId] then
+    if type == "SPELL_AURA_APPLIED" and MoreDots.dots.allDotsExceptRefresh[spellId] then
         print("APPLYING SNAPSHOT")
         MoreDots.snapshot.onDotApplied(spellId, destGUID)
         print("SNAP TABLE")
@@ -64,29 +64,35 @@ function(event, ...)
         return
     end
     
-    if type == "SPELL_AURA_APPLIED" and MoreDots.auras.refreshAuras[spellId] then
-        print("REFRESHING SNAPSHOT")
-        MoreDots.snapshot.onDotRefreshed(spellId, destGuid)
-        return
-    end
-    
     -- clear snapshot for target when DoT expires or is removed
     if type == "SPELL_AURA_REMOVED" and MoreDots.dots.allDots[spellId] then
         print("REMOVING SNAPSHOT")
         MoreDots.snapshot.onDotRemoved(spellId, destGUID)
+        print("SNAP TABLE")
+        for k,v in pairs(MoreDots.snapshot.state[spellName][destGUID]) do
+            print("TABLE: ", k, v)
+        end
         return
     end
-    
-    if type == "SPELL_AURA_REFRESH" and MoreDots.dots.allDots[spellId] then
-        print("REFRESHING SNAPSHOT")
-        MoreDots.snapshot.onDotRefreshed(spellId, destGUID)
-        return
-    end
-    
-    if type == "SPELL_DAMAGE" and MoreDots.spells.refreshSpells[spellId] then
+
+    -- change snapshot table for dots when they are refreshed
+    if type == "SPELL_AURA_REFRESH" and MoreDots.auras.allDots[spellId] then
         print("REFRESHING SNAPSHOT")
         MoreDots.snapshot.onDotRefreshed(spellId, destGuid)
+        print("SNAP TABLE")
+        for k,v in pairs(MoreDots.snapshot.state[spellName][destGUID]) do
+            print("TABLE: ", k, v)
+        end
         return
+    end
+
+    --tracking to see if corruption and swp were cast and if they were if they missed or were re-applied
+    if type == "SPELL_CAST_SUCCESS" and MoreDots.dots.refreshDots[spellId] then
+        MoreDots.dots.refreshDots[spellId] = true
+    end
+
+    if type == "SPELL_MISSED" and MoreDots.dots.refreshDots[spellId] then
+        MoreDots.dots.refreshDots[spellId] = false
     end
 end
 

@@ -31,6 +31,18 @@ MoreDots.dots.critDots = {
     [30405] = "Unstable Affliction"
 }
 
+--tracking whether the refresh dot was cast or refreshed
+MoreDots.dots.refreshDotWasCast = {
+    [27216] = false, --corruption
+    [25368] = false --shadow word: pain
+}
+
+--tracking the last time the refresh dot ticked to update the tick timers properly
+MoreDots.dots.refreshDotTickTime = {
+    [27216] = 0, --corruption
+    [25368] = 0 --shadow word: pain
+}
+
 MoreDots.dots.allDots = {}
 
 for k,v in pairs(MoreDots.dots.critDots) do
@@ -42,6 +54,11 @@ MoreDots.dots.allDotsExceptRefresh = {
     [25467] = "Devouring Plague",
     [34917] = "Vampiric Touch",
     [30405] = "Unstable Affliction"
+}
+
+MoreDots.dots.refreshDots = {
+    [27216] = "Corruption",
+    [25368] = "Shadow Word: Pain"
 }
 
 MoreDots.auras = {}
@@ -74,14 +91,7 @@ MoreDots.auras.lostOnApply = {
     [57531] = "Arcane Potency"
 }
 
---auras that relate to spells that refresh DoTs
-MoreDots.auras.refreshAuras = {
-    [25387] = "Mind Flay",
-    [27217] = "Drain Soul",
-    [47857] = "Drain Life"
-}
-
---[[ this will hold the aura id and a time that it "expires". this time is completely 
+--[[this will hold the aura id and a time that it "expires". this time is completely 
 arbitrary and only represents an estimate of what spell cast received the benefit of
 the aura.
 eg.
@@ -153,8 +163,8 @@ MoreDots.snapshot.relevantEvents = {
     ["SPELL_AURA_APPLIED"] = true,
     ["SPELL_AURA_REFRESH"] = true,
     ["SPELL_AURA_REMOVED"] = true,
-    ["SPELL_DAMAGE"] = true,
-    ["SPELL_CAST_SUCCESS"] = true
+    ["SPELL_CAST_SUCCESS"] = true,
+    ["SPELL_MISSED"] = true
 }
 
 MoreDots.snapshot.makeSnapshotTable = 
@@ -176,11 +186,13 @@ function(spellId)
             snapTable[v] = MoreDots.snapshot.buffIsActive(k)
         end
         
+        if MoreDots.auras.lostOnApply then
         for k,v in pairs(MoreDots.auras.lostOnApply) do
             if MoreDots.auras.lostOnApplyExpireTime[k] > now then
                 snapTable[v] = true
             end
         end
+    end
     end
     
     if MoreDots.dots.hasteDots[spellId] then 
@@ -217,42 +229,45 @@ end
 
 MoreDots.snapshot.onDotRefreshed =
 function(spellId, destGuid)   
-    if MoreDots.dots.allDotsExceptRefresh[spellId] then
+    if MoreDots.dots.allDots[spellId] and not MoreDots.dots.refreshDotWasCast[spellId] then
         MoreDots.snapshot.onDotApply(spellId, destGuid)
         return
     end
-    
-    -- do not handle this case only handle refreshes for refresh spells
-    if MoreDots.dots.refreshDots[spellId] then
+
+    if not MoreDots.dots.allDots[spellId] == "Corruption" and not MoreDots.dots.allDots[spellId] == "Shadow Word: Pain" then
         return
     end
+
+    if MoreDots.dots.refreshDotWasCast[spellId] == true then
+        MoreDots.dots.refreshDotWasCast[spellId] == false
+    end
     
-    if spellId == 59161 or spellId == 47857 or spellId == 47809  then
+    if MoreDots.dots.allDots[spellId] == "Corruption" then
         local snapTable = MoreDots.snapshot.state["Corruption"][destGuid]
         if snapTable ~= nil then
             for k,v in pairs(snapTable) do
                 for i,j in pairs (MoreDots.auras.hasteModifiers) do
                     if k == j then
-                        snapTable[k] = false
+                        snapTable[k] = MoreDots.snapshot.buffIsActive(i)
                         break
                     end
                 end
                 
                 for i,j in pairs (MoreDots.auras.spellPowerModifiers) do
                     if k == j then
-                        snapTable[k] = false
+                        snapTable[k] = MoreDots.snapshot.buffIsActive(i)
                         break
                     end
                 end
             end
         end
-    elseif spellId == 25387 or spellId == 48127 then    
+    elseif MoreDots.dots.allDots[spellId] == "Shadow Word: Pain" then
         local snapTable = MoreDots.snapshot.state["Shadow Word: Pain"][destGuid]
         if snapTable ~= nil then
             for k,v in pairs(snapTable) do
                 for i,j in pairs (MoreDots.auras.spellPowerModifiers) do
                     if k == j then
-                        snapTable[k] = false
+                        snapTable[k] = MoreDots.snapshot.buffIsActive(i)
                         break
                     end
                 end
@@ -313,14 +328,7 @@ function(auraId)
     if MoreDots.auras.lostOnApply[auraId] then
         local time = GetTime()
         MoreDots.auras.lostOnApplyExpireTime[auraId] = time + MoreDots.auras.lostOnApplyExpireTimeInterval
-        for k,v in pairs(MoreDots.auras.lostOnApplyExpireTime) do
-            print("LOST TABLE: ", k, v)
-        end
     end
     
     MoreDots.auras.activeAuras[auraId] = false
 end
-
---initialization
-MoreDots.snapshot.resetSnapshots()
-
