@@ -47,7 +47,7 @@ aura_env.createMarker = function(n)
     aura_env.markers[n] =_G[aura_env.id.."_marker"..n] or CreateFrame("Frame", aura_env.id.."_marker"..n, aura_env.this)
     aura_env.markers[n]:SetWidth(aura_env.markerWidth)
     aura_env.markers[n]:SetHeight(aura_env.globHeight)
-    local pos = aura_env.globWidth*n/6
+    local pos = aura_env.globWidth*n/5 - 2
     aura_env.markers[n]:SetPoint("CENTER", aura_env.this.bar, "LEFT", pos, 0)
     aura_env.markers[n]:SetFrameStrata("HIGH")
     
@@ -56,26 +56,7 @@ aura_env.createMarker = function(n)
     t:SetAllPoints(aura_env.markers[n])
     aura_env.markers[n].texture = t
     
-    if pos < 0 or pos > aura_env.globWidth then
-        aura_env.markers[n]:Hide()
-    else
-        aura_env.markers[n]:Show()
-    end
-end
-
-aura_env.createSMarker = function(n)
-    aura_env.sMarkers[n] =_G[aura_env.id.."_smarker"..n] or CreateFrame("Frame", aura_env.id.."_smarker"..n, aura_env.this)
-    aura_env.sMarkers[n]:SetWidth(aura_env.markerWidth)
-    aura_env.sMarkers[n]:SetHeight(aura_env.globHeight)
-    aura_env.sMarkers[n]:SetPoint("CENTER", aura_env.this.bar, "LEFT", 0, 0)
-    aura_env.sMarkers[n]:SetFrameStrata("DIALOG")
-    
-    local t = aura_env.sMarkers[n]:CreateTexture(nil,"DIALOG")
-    t:SetTexture(aura_env.markerST)
-    t:SetAllPoints(aura_env.sMarkers[n])
-    aura_env.sMarkers[n].texture = t
-    
-    aura_env.sMarkers[n]:Hide()
+    aura_env.markers[n]:Show()
 end
 
 aura_env.createSnapshots = function()
@@ -95,9 +76,9 @@ aura_env.createSnapshots = function()
 end
 
 aura_env.updateSnapshots = function(destGuid)
-    if MoreDots.snapshot.state ~= nil and MoreDots.snapshot.state["Shadow Word: Pain"] ~= nil and MoreDots.snapshot.state["Shadow Word: Pain"][destGuid] ~= nil then
+    if MoreDots.snapshot.state ~= nil and MoreDots.snapshot.state["Vampiric Touch"] ~= nil and MoreDots.snapshot.state["Vampiric Touch"][destGuid] ~= nil then
         aura_env.hideSnapshots()
-        local snapTable = MoreDots.snapshot.state["Shadow Word: Pain"][destGuid]
+        local snapTable = MoreDots.snapshot.state["Vampiric Touch"][destGuid]
         local i = 0
         for k,v in pairs(snapTable) do
             if v then
@@ -122,27 +103,6 @@ aura_env.hideSnapshots = function()
     end
 end
 
---function to update the markers when the DoT is refreshed
-aura_env.moveMarkers = function(x, width)
-    for k,v in pairs(aura_env.markers) do
-        local pos = width*k/6 + x
-        aura_env.markers[k]:SetPoint("CENTER", aura_env.this.bar, "LEFT", pos, 0)
-        if pos < 0 or pos > aura_env.globWidth then
-            aura_env.markers[k]:Hide()
-        else
-            print("predicted: ", pos)
-            aura_env.markers[k]:Show()
-        end
-    end
-end
-
-aura_env.resetMarkers = function(destGuid)
-    local delta = aura_env.deltas[destGuid] or 0
-    for k,v in pairs(aura_env.markers) do
-        local pos = aura_env.globWidth*k/6 + delta
-        aura_env.markers[k]:SetPoint("CENTER", aura_env.this.bar, "LEFT", pos, 0)
-    end
-end
 
 aura_env.moveSMarker = function(dest)
     aura_env.sMarkers[aura_env.sMarkersCount]:SetPoint("CENTER", aura_env.this.bar, "LEFT", dest, 0)
@@ -160,24 +120,9 @@ end
 
 
 --Create Markers
-aura_env.createMarker(-1)
-aura_env.createMarker(-2)
 aura_env.createMarker(0)
 aura_env.createMarker(1)
 aura_env.createMarker(2)
 aura_env.createMarker(3)
 aura_env.createMarker(4)
-aura_env.createMarker(5)
 aura_env.createSnapshots()
-
---Testing
-aura_env.createSMarker(0)
-aura_env.createSMarker(1)
-aura_env.createSMarker(2)
-aura_env.createSMarker(3)
-aura_env.createSMarker(4)
-aura_env.createSMarker(5)
-aura_env.createSMarker(6)
-aura_env.createSMarker(7)
-aura_env.createSMarker(8)
-aura_env.createSMarker(9)
