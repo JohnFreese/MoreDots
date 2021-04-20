@@ -3,6 +3,7 @@
 
     Events that are created by MoreDots
     MOREDOTS_DOT_APPLIED, spellId, destGuid, snapTable
+    MOREDOTS_DOT_REFRESHED, spellId, destGuid, snapTable
     MOREDOTS_DOT_REMOVED, spellId, destGuid
 
     Search ~CONFIG~ to adjust some configuration properties
@@ -164,7 +165,7 @@ MoreDots.auras.damageModifiers = {
 }
 
 MoreDots.auras.critModifiers = { 
-    --[57531] = "Arcane Potency" special case
+    [57531] = "Arcane Potency", --special case
     [31842] = "Divine Illumination"
 }
 
@@ -172,7 +173,8 @@ MoreDots.auras.hasteModifiers = {
     [2825] = "Bloodlust",
     [10060] = "Power Infusion",
     [64371] = "Eradication",
-    [965899] = "Soul Fragment"
+    [965899] = "Soul Fragment",
+    [965900] = "Shadow Visions"
 }
 
 MoreDots.auras.spellPowerModifiers = {
@@ -187,7 +189,8 @@ MoreDots.auras.spellPowerModifiers = {
     If an aura needs to be added here the makeSnapshotTable function needs to be updated
 ]]
 MoreDots.auras.lostOnApply = {
-    [57531] = "Arcane Potency"
+    [57531] = "Arcane Potency",
+    [965900] = "Shadow Visions"
 }
 
 -- ~CONFIG~ 
@@ -195,7 +198,8 @@ MoreDots.auras.hasteRatings = {
     [2825] = 20, -- lust
     [10060] = 20, -- PI
     [64371] = 26, --eradication 20 + 6 from REs
-    [965899] = 1 --1/stack to a maximum of 8 (9 is when the aura is removed)
+    [965899] = 1, --1/stack to a maximum of 8 (9 is when the aura is removed)
+    [965900] = 0
 }
 
 --[[this will hold the aura id and a time that it "expires". this time is completely 
@@ -277,8 +281,8 @@ MoreDots.snapshot = {}
 --[[state will look something like this:
     MoreDots.snapshot.state[destGuid][spellId]
     the value for this will be a table of the tracked auras.
-    ["Arcane Potency"] = true,
-    ["Power Infusion"] = false,
+    [57531] = true, arcane potency
+    [10060] = false, PI
     ...
 ]]
 MoreDots.snapshot.state = {}
@@ -298,28 +302,33 @@ MoreDots.snapshot.makeSnapshotTable = function(spellId)
     local snapTable = {}
     
     for k,v in pairs(MoreDots.auras.damageModifiers) do
-        snapTable[v] = MoreDots.auras.buffIsActive(k)    
+        snapTable[k] = MoreDots.auras.buffIsActive(k)    
     end
     
     if MoreDots.dots.critDots[spellId] then 
         for k,v in pairs(MoreDots.auras.critModifiers) do
-            snapTable[v] = MoreDots.auras.buffIsActive(k)
+            snapTable[k] = MoreDots.auras.buffIsActive(k)
         end
         
-        for k,v in pairs(MoreDots.auras.lostOnApply) do
-            if MoreDots.auras.lostOnApplyExpireTime[k] ~= nil then
-                if MoreDots.auras.lostOnApplyExpireTime[k] > now then
-                    snapTable[v] = true
-                end
-                snapTable[v] = false
+        if MoreDots.auras.lostOnApplyExpireTime[k] ~= nil then
+            if MoreDots.auras.lostOnApplyExpireTime[k] > now then
+                snapTable[k] = true
             end
+            snapTable[k] = false
         end
     end
     
     if MoreDots.dots.hasteDots[spellId] then 
         for k,v in pairs(MoreDots.auras.hasteModifiers) do
-            snapTable[v] = MoreDots.auras.buffIsActive(k)
-        end    
+            snapTable[k] = MoreDots.auras.buffIsActive(k)
+        end
+        
+        if MoreDots.auras.lostOnApplyExpireTime[k] ~= nil then
+            if MoreDots.auras.lostOnApplyExpireTime[k] > now then
+                snapTable[k] = true
+            end
+            snapTable[k] = false
+        end
     end
     
     return snapTable
@@ -371,14 +380,14 @@ MoreDots.snapshot.onDotRefreshed = function(spellId, destGuid)
         for k,v in pairs(snapTable) do
             for i,j in pairs (MoreDots.auras.hasteModifiers) do
                 if k == j then
-                    snapTable[k] = MoreDots.auras.buffIsActive(i)
+                    snapTable[i] = MoreDots.auras.buffIsActive(i)
                     break
                 end
             end
             
             for i,j in pairs (MoreDots.auras.spellPowerModifiers) do
                 if k == j then
-                    snapTable[k] = MoreDots.auras.buffIsActive(i)
+                    snapTable[i] = MoreDots.auras.buffIsActive(i)
                     break
                 end
             end
@@ -468,6 +477,12 @@ MoreDots.bars.snapshotTextures = {
     [32108] = "Interface\\Icons\\Spell_Lightning_LightningBolt01" --lesser spell blasting
 }
 
+--[[special cases that are not handled by the general bar functions.
+currently no use for this, but it is here just in case]]
+MoreDots.bars.snapshotTexturesSpecial = {
+    [965900] = "Interface\\Icons\\Spell_Shadow_Charm" --shadow visions
+}
+
 MoreDots.bars.createMarkers = function(spellId, markerTable, height, parent)
     if not MoreDots.dots.numberOfTicks[spellId] then
         return
@@ -479,7 +494,7 @@ MoreDots.bars.createMarkers = function(spellId, markerTable, height, parent)
 end
 
 MoreDots.bars.createMarker = function(spellId, markerTable, height, parent, n)
-    -- _G is the global table that holds all frame ids
+    --_G is the global table that holds all frame ids
     markerTable[n] =_G[spellId.."_marker"..n] or CreateFrame("Frame" ,spellId.."_marker"..n, parent)
     markerTable[n]:SetWidth(MoreDots.bars.markerWidth)
     markerTable[n]:SetHeight(height)
@@ -553,4 +568,3 @@ MoreDots.debug.printObject = function(o)
         return tostring(o)
     end
 end
-
