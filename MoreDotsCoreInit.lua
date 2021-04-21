@@ -58,11 +58,11 @@ MoreDots.haste.calculateBaseHaste = function()
 end
 
 --haste stacks multiplicatively
-MoreDots.haste.playerHaste.addHaste = function(haste)
+MoreDots.haste.addPlayerHaste = function(haste)
     MoreDots.playerHaste = ((1 + MoreDots.playerHaste/100) * (1 + haste/100) - 1) * 100
 end
 
-MoreDots.haste.playerHaste.removeHaste = function(haste)
+MoreDots.haste.removePlayerHaste = function(haste)
     MoreDots.playerHaste = ((MoreDots.playerHaste/100 + 1)/(1 + haste/100) - 1) * 100
 end
 
@@ -245,7 +245,7 @@ MoreDots.auras.onBuffApplied = function(spellId)
     end
     
     if MoreDots.auras.hasteRatings[spellId] and MoreDots.auras.activeAuras[spellId] ~= true then
-        MoreDots.haste.addHaste(MoreDots.auras.hasteRatings[spellId])
+        MoreDots.haste.addPlayerHaste(MoreDots.auras.hasteRatings[spellId])
     end
     
     MoreDots.auras.activeAuras[spellId] = true
@@ -263,7 +263,7 @@ MoreDots.auras.onBuffRemoved = function(spellId)
     end
     
     if MoreDots.auras.hasteRatings[spellId] then
-        MoreDots.haste.removeHaste(MoreDots.auras.hasteRatings[spellId])
+        MoreDots.haste.removePlayerHaste(MoreDots.auras.hasteRatings[spellId])
     end
     
     MoreDots.auras.activeAuras[spellId] = false
@@ -356,7 +356,7 @@ MoreDots.snapshot.onDotRemoved = function (spellId, destGuid)
     if not MoreDots.dots.allDots[spellId] then
         return
     end
-
+    
     MoreDots.snapshot.state[spellId][destGuid] = {}
     WeakAuras.ScanEvents("MOREDOTS_DOT_REMOVED", spellId, destGuid)
 end
@@ -365,8 +365,8 @@ end
 MoreDots.snapshot.onDotRefreshed = function(spellId, destGuid)  
     if MoreDots.dots.allDots[spellId] 
     and (MoreDots.dots.refreshDotWasCast[spellId] == nil 
-    or MoreDots.dots.refreshDotWasCast[spellId][destGuid] == nil 
-    or MoreDots.dots.refreshDotWasCast[spellId][destGuid]) then
+        or MoreDots.dots.refreshDotWasCast[spellId][destGuid] == nil 
+        or MoreDots.dots.refreshDotWasCast[spellId][destGuid]) then
         MoreDots.snapshot.onDotApplied(spellId, destGuid)
         return
     end
@@ -483,17 +483,17 @@ MoreDots.bars.snapshotTexturesSpecial = {
     [965900] = "Interface\\Icons\\Spell_Shadow_Charm" --shadow visions
 }
 
-MoreDots.bars.createMarkers = function(spellId, markerTable, height, parent)
+MoreDots.bars.createMarkers = function(spellId, markerTable, width, height, parent)
     if not MoreDots.dots.numberOfTicks[spellId] then
         return
     end
-
+    
     for i=0,MoreDots.dots.numberOfTicks[spellId] - 1 do
-        MoreDots.bars.createMarker(spellId, markerTable, height, i)
+        MoreDots.bars.createMarker(spellId, markerTable, width, height, parent, i)
     end
 end
 
-MoreDots.bars.createMarker = function(spellId, markerTable, height, parent, n)
+MoreDots.bars.createMarker = function(spellId, markerTable, width, height, parent, n)
     --_G is the global table that holds all frame ids
     markerTable[n] =_G[spellId.."_marker"..n] or CreateFrame("Frame" ,spellId.."_marker"..n, parent)
     markerTable[n]:SetWidth(MoreDots.bars.markerWidth)
