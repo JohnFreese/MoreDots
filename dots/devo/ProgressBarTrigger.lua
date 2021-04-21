@@ -4,13 +4,13 @@ function(event, spellId, destGuid, snapTable)
         if event == "MOREDOTS_DOT_REMOVED" 
         or event == "MOREDOTS_DOT_APPLIED" 
         or event == "MOREDOTS_DOT_REFRESHED" then
-            if snapTable and snapTable["Shadow Visions"] then
+            if snapTable and snapTable[965900] then
                 aura_env.changeNumberOfTicks(12)
             else
                 aura_env.changeNumberOfTicks(8)
             end
             
-            aura_env.updateSnapshots(aura_env.spellId, destGuid, aura_env.snapshots, aura_env.globHeight, aura_env.this)
+            aura_env.updateSnapshots(destGuid, snapTable)
         end
     end
     

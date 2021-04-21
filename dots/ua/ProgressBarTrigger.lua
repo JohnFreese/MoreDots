@@ -4,7 +4,7 @@ function(event, spellId, destGuid, snapTable)
         if event == "MOREDOTS_DOT_REMOVED" 
         or event == "MOREDOTS_DOT_APPLIED"
         or event == "MOREDOTS_DOT_REFRESHED" then
-            aura_env.updateSnapshots(destGuid)
+            aura_env.updateSnapshots(destGuid, snapTable)
         end
     end
     

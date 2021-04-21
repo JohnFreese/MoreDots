@@ -4,6 +4,9 @@ aura_env.globWidth = aura_env.this.bar:GetWidth()
 aura_env.globHeight = aura_env.this.bar:GetHeight()
 aura_env.markers = {}
 aura_env.snapshots = {}
+aura_env.snapshotWidth = aura_env.globHeight/2
+aura_env.snapshotHeight = aura_env.globHeight/2
+aura_env.snapshotBarLength = 4
 aura_env.snapshotBarLength = 4
 aura_env.markerWidth = 2
 aura_env.markersTexture = "Interface\\AddOns\\WeakAuras\\Media\\Textures\\Square_Smooth_Border2.tga"
@@ -19,6 +22,10 @@ aura_env.snapshotTextures = {
     [33697] = "Interface\\Icons\\Racial_Orc_BerserkerStrength", --blood fury
     [35163] = "Interface\\Icons\\INV_Trinket_Naxxramas06", --blessing of the silver crescent
     [32108] = "Interface\\Icons\\Spell_Lightning_LightningBolt01" --lesser spell blasting
+}
+
+aura_env.specialSnapshots = {
+    [965900] = "Shadow Visions"
 }
 
 aura_env.createMarkers = function()
@@ -60,24 +67,21 @@ aura_env.createSnapshots = function()
     end
 end
 
-aura_env.updateSnapshots = function(destGuid)
-    if MoreDots.snapshot.state ~= nil and MoreDots.snapshot.state[aura_env.spellId] ~= nil and MoreDots.snapshot.state[aura_env.spellId][destGuid] ~= nil then
-        aura_env.hideSnapshots()
-        local snapTable = MoreDots.snapshot.state[aura_env.spellId][destGuid]
-        local i = 0
-        for k,v in pairs(snapTable) do
-            if v then
-                if i < aura_env.snapshotBarLength then
-                    aura_env.snapshots[k]:SetPoint("TOPRIGHT", aura_env.this.bar, "TOPRIGHT", (i + 1) * aura_env.globHeight/2, 0)
-                    aura_env.snapshots[k]:Show()
-                elseif i < aura_env.snapshotBarLength * 2 then
-                    aura_env.snapshots[k]:SetPoint("TOPRIGHT", aura_env.this.bar, "TOPRIGHT", (i + 1 - MoreDots.bars.snapshotBarLength) * aura_env.globHeight/2, -aura_env.globHeight/2)
-                    aura_env.snapshots[k]:Show()
-                else
-                    -- only show a certain amount of snapshots
-                end
-                i = i + 1
+aura_env.updateSnapshots = function(destGuid, snapTable)  
+    aura_env.hideSnapshots()
+    local i = 0
+    for k,v in pairs(snapTable) do
+        if v and not aura_env.specialSnapshots[k] then
+            if i < aura_env.snapshotBarLength then
+                aura_env.snapshots[k]:SetPoint("TOPRIGHT", aura_env.this.bar, "TOPRIGHT", (i + 1) * aura_env.snapshotWidth, 0)
+                aura_env.snapshots[k]:Show()
+            elseif i < aura_env.snapshotBarLength * 2 then
+                aura_env.snapshots[k]:SetPoint("TOPRIGHT", aura_env.this.bar, "TOPRIGHT", (i + 1 - aura_env.snapshotBarLength) * aura_env.snapshotWidth, -aura_env.snapshotHeight)
+                aura_env.snapshots[k]:Show()
+            else
+                -- only show a certain amount of snapshots
             end
+            i = i + 1
         end
     end
 end

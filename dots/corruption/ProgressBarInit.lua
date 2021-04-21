@@ -1,5 +1,5 @@
 aura_env.this = WeakAuras.regions[aura_env.id].region
-aura_env.spellId = 25368
+aura_env.spellId = 27216
 aura_env.globWidth = aura_env.this.bar:GetWidth()
 aura_env.globHeight= aura_env.this.bar:GetHeight()
 aura_env.snapshots = {}

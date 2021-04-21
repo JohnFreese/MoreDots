@@ -55,7 +55,6 @@ function(event, ...)
     -- buff changes on player that affect snapshots
     if destGuid == MoreDots.playerGuid then
         if (type == "SPELL_AURA_APPLIED" or type == "SPELL_AURA_REFRESH") and MoreDots.auras.allAuras[spellId] then
-            --print("aura applied: "..spellId);
             MoreDots.auras.onBuffApplied(spellId)
             return
         elseif type == "SPELL_AURA_REMOVED" and MoreDots.auras.allAuras[spellId] then
@@ -68,6 +67,7 @@ function(event, ...)
     if type == "SPELL_AURA_APPLIED" and MoreDots.dots.allDots[spellId] then
         print("APPLYING SNAPSHOT")
         MoreDots.snapshot.onDotApplied(spellId, destGuid)
+        print("SNAP TABLE: ", MoreDots.debug.printObject(MoreDots.snapshot.state[spellId][destGuid]))
         return
     end
     
@@ -75,6 +75,7 @@ function(event, ...)
     if type == "SPELL_AURA_REMOVED" and MoreDots.dots.allDots[spellId] then
         print("REMOVING SNAPSHOT")
         MoreDots.snapshot.onDotRemoved(spellId, destGuid)
+        print("SNAP TABLE: ", MoreDots.debug.printObject(MoreDots.snapshot.state[spellId][destGuid]))
         return
     end
     
@@ -82,6 +83,7 @@ function(event, ...)
     if type == "SPELL_AURA_REFRESH" and MoreDots.dots.allDots[spellId] then
         print("REFRESHING SNAPSHOT")
         MoreDots.snapshot.onDotRefreshed(spellId, destGuid)
+        print("SNAP TABLE: ", MoreDots.debug.printObject(MoreDots.snapshot.state[spellId][destGuid]))
         return
     end
     

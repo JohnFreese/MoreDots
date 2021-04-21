@@ -4,7 +4,7 @@
     Events that are created by MoreDots
     MOREDOTS_DOT_APPLIED, spellId, destGuid, snapTable
     MOREDOTS_DOT_REFRESHED, spellId, destGuid, snapTable
-    MOREDOTS_DOT_REMOVED, spellId, destGuid
+    MOREDOTS_DOT_REMOVED, spellId, destGuid, snapTable
 
     Search ~CONFIG~ to adjust some configuration properties
 ]]
@@ -210,7 +210,7 @@ MoreDots.auras.hasteRatings = {
     lostOnApplyExpireTime[57531] = <time the aura was removed + some number>
 ]]
 MoreDots.auras.lostOnApplyExpireTime = {}
-MoreDots.auras.lostOnApplyExpireTimeInterval = 0.5
+MoreDots.auras.lostOnApplyExpireTimeInterval = 0.25
 
 MoreDots.auras.allAuras = {}
 
@@ -272,7 +272,15 @@ MoreDots.auras.onBuffRemoved = function(spellId)
 end
 
 MoreDots.auras.buffIsActive = function(spellId)
-    return MoreDots.auras.activeAuras ~= nil and MoreDots.auras.activeAuras[spellId] ~= nil and MoreDots.auras.activeAuras[spellId] == true
+    local spellName = MoreDots.auras.allAuras[spellId]
+    if not spellName then
+        return
+    end
+    
+    name, rank, icon, count, debuffType, duration, expirationTime, unitCaster, isStealable, 
+    shouldConsolidate, spellId = UnitBuff("player", spellName)
+    
+    return name ~= nil
 end
 
 --========================================
@@ -313,10 +321,10 @@ MoreDots.snapshot.makeSnapshotTable = function(spellId)
                 snapTable[k] = MoreDots.auras.buffIsActive(k)
             end
             
-            if MoreDots.auras.lostOnApplyExpireTime[k] ~= nil and
-            MoreDots.auras.lostOnApplyExpireTime[k] > now then
+            if MoreDots.auras.lostOnApplyExpireTime[k] ~= nil 
+            and MoreDots.auras.lostOnApplyExpireTime[k] > now then
                 snapTable[k] = true
-            else
+            elseif MoreDots.auras.lostOnApply[k] ~= nil then
                 snapTable[k] = false
             end
         end
@@ -325,20 +333,18 @@ MoreDots.snapshot.makeSnapshotTable = function(spellId)
     
     if MoreDots.dots.hasteDots[spellId] then 
         for k,v in pairs(MoreDots.auras.hasteModifiers) do
-            if not MoreDots.auras.lostOnApply[k] then
+            if MoreDots.auras.lostOnApply[k] == nil then
                 snapTable[k] = MoreDots.auras.buffIsActive(k)
             end
             
             if MoreDots.auras.lostOnApplyExpireTime[k] ~= nil
             and MoreDots.auras.lostOnApplyExpireTime[k] > now then
                 snapTable[k] = true
-            else
+            elseif MoreDots.auras.lostOnApply[k] ~= nil then
                 snapTable[k] = false
             end
         end
     end
-    
-    print(MoreDots.debug.printObject(snapTable))
     
     return snapTable
 end
@@ -366,8 +372,11 @@ MoreDots.snapshot.onDotRemoved = function (spellId, destGuid)
         return
     end
     
-    MoreDots.snapshot.state[spellId][destGuid] = {}
-    WeakAuras.ScanEvents("MOREDOTS_DOT_REMOVED", spellId, destGuid)
+    local snapTable = {}
+    
+    MoreDots.snapshot.state[spellId] = {}
+    MoreDots.snapshot.state[spellId][destGuid] = snapTable
+    WeakAuras.ScanEvents("MOREDOTS_DOT_REMOVED", spellId, destGuid, snapTable)
 end
 
 --only crit and damage% modifiers refresh
@@ -388,14 +397,14 @@ MoreDots.snapshot.onDotRefreshed = function(spellId, destGuid)
     if snapTable ~= nil then
         for k,v in pairs(snapTable) do
             for i,j in pairs (MoreDots.auras.hasteModifiers) do
-                if k == j then
+                if k == i then
                     snapTable[i] = MoreDots.auras.buffIsActive(i)
                     break
                 end
             end
             
             for i,j in pairs (MoreDots.auras.spellPowerModifiers) do
-                if k == j then
+                if k == i then
                     snapTable[i] = MoreDots.auras.buffIsActive(i)
                     break
                 end
