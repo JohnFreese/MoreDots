@@ -171,6 +171,7 @@ MoreDots.auras.critModifiers = {
 
 MoreDots.auras.hasteModifiers = { 
     [2825] = "Bloodlust",
+    [2895] = "Wrath of Air Totem",
     [10060] = "Power Infusion",
     [64371] = "Eradication",
     [965899] = "Soul Fragment",
@@ -196,10 +197,11 @@ MoreDots.auras.lostOnApply = {
 -- ~CONFIG~ 
 MoreDots.auras.hasteRatings = {
     [2825] = 20, -- lust
+    [2895] = 3, --totem
     [10060] = 20, -- PI
     [64371] = 26, --eradication 20 + 6 from REs
     [965899] = 1, --1/stack to a maximum of 8 (9 is when the aura is removed)
-    [965900] = 0
+    [965900] = 0 --special case for devo plague
 }
 
 --[[this will hold the aura id and a time that it "expires". this time is completely 
@@ -307,29 +309,36 @@ MoreDots.snapshot.makeSnapshotTable = function(spellId)
     
     if MoreDots.dots.critDots[spellId] then 
         for k,v in pairs(MoreDots.auras.critModifiers) do
-            snapTable[k] = MoreDots.auras.buffIsActive(k)
+            if not MoreDots.auras.lostOnApply[k] then
+                snapTable[k] = MoreDots.auras.buffIsActive(k)
+            end
+            
+            if MoreDots.auras.lostOnApplyExpireTime[k] ~= nil and
+            MoreDots.auras.lostOnApplyExpireTime[k] > now then
+                snapTable[k] = true
+            else
+                snapTable[k] = false
+            end
         end
         
-        if MoreDots.auras.lostOnApplyExpireTime[k] ~= nil then
-            if MoreDots.auras.lostOnApplyExpireTime[k] > now then
-                snapTable[k] = true
-            end
-            snapTable[k] = false
-        end
     end
     
     if MoreDots.dots.hasteDots[spellId] then 
         for k,v in pairs(MoreDots.auras.hasteModifiers) do
-            snapTable[k] = MoreDots.auras.buffIsActive(k)
-        end
-        
-        if MoreDots.auras.lostOnApplyExpireTime[k] ~= nil then
-            if MoreDots.auras.lostOnApplyExpireTime[k] > now then
-                snapTable[k] = true
+            if not MoreDots.auras.lostOnApply[k] then
+                snapTable[k] = MoreDots.auras.buffIsActive(k)
             end
-            snapTable[k] = false
+            
+            if MoreDots.auras.lostOnApplyExpireTime[k] ~= nil
+            and MoreDots.auras.lostOnApplyExpireTime[k] > now then
+                snapTable[k] = true
+            else
+                snapTable[k] = false
+            end
         end
     end
+    
+    print(MoreDots.debug.printObject(snapTable))
     
     return snapTable
 end
@@ -418,7 +427,7 @@ MoreDots.snapshot.updateTickTimer = function(spellId, destGuid)
         MoreDots.dots.refreshDotTickTime[spellId][destGuid] = GetTime()
         MoreDots.dots.refreshDotNextTickTime[spellId][destGuid] = MoreDots.haste.calculateNextTick(spellId, destGuid)
         
-        WeakAuras.ScanEvents("MOREDOTS_DOT_TICKED", spellId, destGuid, nil, MoreDots.dots.refreshDotTickTime[destGuid][spellId])
+        --WeakAuras.ScanEvents("MOREDOTS_DOT_TICKED", spellId, destGuid, nil, MoreDots.dots.refreshDotTickTime[spellId][destGui])
         --print("tick time: ", MoreDots.dots.refreshDotTickTime[destGuid][spellId])
         --print("next tick time: ", MoreDots.dots.refreshDotNextTickTime[destGuid][spellId])
     end
